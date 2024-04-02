@@ -7,11 +7,12 @@ import wandb
 
 def buildModel(lr_rate=3e-4, verbose=False):
 
-    model = Model().cuda()
-    loss_fn = CrossEntropyLoss(ignore_index=255)
-    optimizer = Adam(model.parameters(), lr=lr_rate)
+    
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model = Model().to(device)
+    loss_fn = CrossEntropyLoss(ignore_index=255)
+    optimizer = Adam(model.parameters(), lr=lr_rate)
 
     if verbose:
         print(f'Working on device: {device}')
@@ -31,12 +32,10 @@ def trainModel(dataloader, model, loss_fn, optimizer,device, wenb=True, verbose=
     size = len(dataloader.dataset)
     model.train() #Set the model to train mode
     for batch, (image,target) in enumerate(dataloader):
-        image = image.to(device)
+        image = image.float().to(device)
         #print(image.size())
-        target  = (target*255).long().squeeze(dim=0)     #*255 because the id are normalized between 0-1
+        target  = (target).long().squeeze(dim=0)     #*255 because the id are normalized between 0-1
         target = utils.map_id_to_train_id(target).to(device)
-        
-        #print(target.size())
         
         #predict
         segmentation = model(image)

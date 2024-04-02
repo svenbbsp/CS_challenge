@@ -3,12 +3,14 @@ from torch.utils.data import random_split, DataLoader
 from torchvision.transforms import Compose, v2
 import torch
 from torchvision import transforms
+from torchvision.transforms import InterpolationMode
 
 
 def getTransforms(subsize):
     transformsobject = Compose([
-        v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)]),
-        v2.Resize(subsize, antialias=True),
+        #v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)]),
+        v2.PILToTensor(),
+        v2.Resize(subsize, interpolation= InterpolationMode.NEAREST_EXACT, antialias=True),
     ])
     return transformsobject
 
