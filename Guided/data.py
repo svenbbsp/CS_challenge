@@ -8,18 +8,28 @@ from torchvision.transforms import InterpolationMode
 
 def getTransforms(subsize):
     trans = Compose([
-        #v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)]),
-        v2.PILToTensor(),
-        v2.Resize(subsize, interpolation= InterpolationMode.NEAREST_EXACT, antialias=True),
+        transforms.PILToTensor(),
+        transforms.Resize(subsize, interpolation= InterpolationMode.NEAREST),
+    ])
+    return trans
+
+def getFlipTransforms(subsize):
+    trans = Compose([
+        transforms.PILToTensor(),
+        transforms.Resize(subsize, interpolation= InterpolationMode.NEAREST),
+        transforms.RandomHorizontalFlip(1)
     ])
     return trans
 
 
-def loadData(root,transforms,val_size=0.2,verbose=False):
+def loadData(root,subsize,val_size=0.2,verbose=False):
     
     # Dataset from local root folder
-    dataset = Cityscapes(root=root, split='train', mode='fine', target_type='semantic', transform=transforms, target_transform=transforms)
+    dataset = Cityscapes(root=root, split='train', mode='fine', target_type='semantic', transform=getTransforms(subsize), target_transform=getTransforms(subsize))
+    flipped_dataset = Cityscapes(root=root, split='train', mode='fine', target_type='semantic', transform=getFlipTransforms(subsize), target_transform=getFlipTransforms(subsize))
     
+    dataset = torch.utils.data.ConcatDataset([dataset, flipped_dataset])
+
     # Train/val split
     train_set, val_set = random_split(dataset, [1-val_size,val_size])
 
