@@ -7,12 +7,12 @@ from torchvision.transforms import InterpolationMode
 
 
 def getTransforms(subsize):
-    transformsobject = Compose([
+    trans = Compose([
         #v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)]),
         v2.PILToTensor(),
         v2.Resize(subsize, interpolation= InterpolationMode.NEAREST_EXACT, antialias=True),
     ])
-    return transformsobject
+    return trans
 
 
 def loadData(root,transforms,val_size=0.2,verbose=False):

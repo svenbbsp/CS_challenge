@@ -25,46 +25,43 @@ def showImageAndTarget(data_loader):
 
     plt.show()
 
-def showImageTargetAndPrediction(data_loader, model):
-    image, target = next(iter(data_loader))
-    image = image.float().to('cuda')
-
-    model.eval()
-    prediction = torch.argmax(model(image).squeeze(), dim=0)
-
+def showImageTargetAndPrediction(image, target, prediction):
+    
     fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18,6))
+
+    ax1.imshow(image)
+    ax1.set_title('Image')
+
+    ax2.imshow(target)
+    ax2.set_title('Target')
+
+    ax3.imshow(prediction)
+    ax3.set_title('Prediction')
+    
+    plt.show()
+
+def showPixelValues(image):
+    image = (np.array(image)).flatten()
+    plt.boxplot(image)
+    plt.show()
+
+
+
+def getImageTargetAndPrediction(data_loader, model):
+    batch = next(iter(data_loader))
+    image, target = batch[0][0].unsqueeze(0), batch[1][0]
+
+    
+    input = image.float().to('cuda')
+    
+    model.eval()
+    output = model(input)
+    
+    prediction = torch.argmax(output, dim=1).squeeze()
+
 
     pil_image = transforms.ToPILImage()(image.squeeze().to('cpu'))
     pil_target = transforms.ToPILImage()((target).squeeze().to('cpu'))
     pil_prediction = transforms.ToPILImage()((prediction/255).to('cpu').numpy().astype('float32'))
-    
-    
-    
-    ax1.imshow(pil_image)
-    ax1.set_title('Image')
 
-    ax2.imshow(pil_target)
-    ax2.set_title('Target')
-
-    ax3.imshow(pil_prediction)
-    
-    plt.show()
-
-def showPixelValues(data_loader, model):
-    image, target = next(iter(data_loader))
-    image = image.float().to('cuda')
-    model.eval()
-    prediction = torch.argmax(model(image).squeeze(), dim=0)
-
-    fig, (ax2, ax3) = plt.subplots(1, 2, figsize=(12,6))
-    
-    t_array = (target).squeeze().to('cpu').numpy().astype('float32').flatten()
-    print(np.shape(t_array))
-
-    ax2.boxplot(t_array)
-    ax2.set_title('Target')
-
-    ax3.boxplot((prediction).squeeze().to('cpu').numpy().astype('float32').flatten())
-    ax3.set_title('Prediction')
-
-    plt.show()
+    return pil_image, pil_target, pil_prediction
