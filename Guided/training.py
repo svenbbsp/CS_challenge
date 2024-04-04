@@ -5,13 +5,13 @@ import utils
 import torch
 import wandb
 
-def buildModel(lr_rate=3e-4, verbose=False):
+def buildModel(lr_rate, weights, verbose=False):
 
     
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = Model().to(device)
-    loss_fn = CrossEntropyLoss(ignore_index=255)
+    loss_fn = CrossEntropyLoss(weight=weights.to(device),ignore_index=255)
     optimizer = Adam(model.parameters(), lr=lr_rate)
 
     if verbose:
