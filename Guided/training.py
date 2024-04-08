@@ -5,21 +5,21 @@ import utils
 import torch
 import wandb
 
-def buildModel(lr_rate, weights, verbose=False):
+def buildModel(lr_rate, weights, weight_decay, verbose=False):
 
     
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = Model().to(device)
     loss_fn = CrossEntropyLoss(weight=weights.to(device),ignore_index=255)
-    optimizer = Adam(model.parameters(), lr=lr_rate)
+    optimizer = Adam(model.parameters(), lr=lr_rate, weight_decay=weight_decay)
 
     if verbose:
         print(f'Working on device: {device}')
 
     return model, loss_fn, optimizer, device
 
-def trainSingleEpoch(dataloader, model, loss_fn, optimizer,device, wenb=True, verbose=False):
+def trainSingleEpoch(dataloader, model, loss_fn, optimizer,device, epoch, wenb=True, verbose=False):
     """
     Train a model for 1 epoch.
 
@@ -30,6 +30,8 @@ def trainSingleEpoch(dataloader, model, loss_fn, optimizer,device, wenb=True, ve
     - optimizer:    the desired optimization.
     """
     size = len(dataloader.dataset)
+    
+    x_train=0
     model.train() #Set the model to train mode
     for batch, (image,target) in enumerate(dataloader):
         image = image.float().to(device)
@@ -54,7 +56,10 @@ def trainSingleEpoch(dataloader, model, loss_fn, optimizer,device, wenb=True, ve
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
         if wenb:
-            wandb.log({"train_loss": loss})
+            wandb.log({"train_loss": loss, "x_train": (epoch-1)*len(dataloader)+x_train})
+            x_train = x_train+1
+
+        
     
 
 def testModel(dataloader, model, loss_fn, device, epoch, wenb=True, verbose=False):
@@ -69,6 +74,7 @@ def testModel(dataloader, model, loss_fn, device, epoch, wenb=True, verbose=Fals
     num_batches = len(dataloader)
     model.eval() #model in eval mode
     test_loss = 0
+    x=0
     with torch.no_grad():
         for _, (image,target) in enumerate(dataloader):
             image = image.float().to(device)
@@ -82,7 +88,8 @@ def testModel(dataloader, model, loss_fn, device, epoch, wenb=True, verbose=Fals
                 print(f'Loss: {loss}')
 
             if wenb:
-                wandb.log({"validation_loss": loss})
+                wandb.log({"validation_loss": loss, "x_val": x+ len(dataloader)*(epoch-1)})
+                x = x+1
             
     test_loss /= num_batches
     if verbose:
@@ -96,7 +103,7 @@ def trainModel(train_dataloader, val_dataloader, model, loss_fn, optimizer,devic
     for t in range(epochs):
         if verbose:
             print(f"Epoch {t+1}\n-------------------------------")
-        trainSingleEpoch(train_dataloader, model, loss_fn, optimizer, device, wenb, verbose)
+        trainSingleEpoch(train_dataloader, model, loss_fn, optimizer, device, (t+1), wenb, verbose)
         testModel(val_dataloader, model, loss_fn, device, (t+1), wenb, verbose)
 
     print("Done!")
