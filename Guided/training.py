@@ -4,6 +4,7 @@ from torch.optim import Adam
 import utils
 import torch
 import wandb
+import eval
 
 def buildModel(lr_rate, weights, weight_decay, verbose=False):
 
@@ -99,11 +100,15 @@ def testModel(dataloader, model, loss_fn, device, epoch, wenb=True, verbose=Fals
     if wenb:
         wandb.log({"average_validation_loss": test_loss, "epoch": epoch})
 
-def trainModel(train_dataloader, val_dataloader, model, loss_fn, optimizer,device, epochs, wenb, verbose):
+def trainModel(train_dataloader, val_dataloader, model, loss_fn, optimizer,device, epochs, wenb, val_set,subsize, verbose):
     for t in range(epochs):
         if verbose:
             print(f"Epoch {t+1}\n-------------------------------")
         trainSingleEpoch(train_dataloader, model, loss_fn, optimizer, device, (t+1), wenb, verbose)
         testModel(val_dataloader, model, loss_fn, device, (t+1), wenb, verbose)
+
+        averageIOU = eval.calculateIOU(val_set, model, device, subsize, False)
+        if wenb:
+            wandb.log({"Average IOU": averageIOU})
 
     print("Done!")

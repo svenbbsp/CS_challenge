@@ -74,3 +74,25 @@ def calculateIOU(dataset, model, device, shape, verbose=False):
 
     averageIOU = IOU/size
     return averageIOU
+
+
+def dice_score(predicted_mask, ground_truth_mask):
+    # Initialize an array to store dice scores for each class
+    dice_scores = np.zeros(19)
+    
+    for i in range(19):
+        
+        # Extract masks for class i
+        pred_mask_i = np.where(predicted_mask == i, 1, 0)
+        gt_mask_i = np.where(ground_truth_mask == i, 1, 0)
+        
+        # Compute intersection, union, and dice score
+        intersection = np.sum(pred_mask_i * gt_mask_i)
+        union = np.sum(pred_mask_i) + np.sum(gt_mask_i)
+        
+        if union == 0:
+            dice_scores[i] = 1.0  # Define dice score as 1.0 if union is 0
+        else:
+            dice_scores[i] = 2.0 * intersection / union
+    
+    return dice_scores
