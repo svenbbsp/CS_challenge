@@ -4,6 +4,8 @@ from torch.optim import Adam
 import utils
 import torch
 import wandb
+import modernUnet
+
 import eval
 
 def buildModel(lr_rate, weights, weight_decay, verbose=False):
@@ -11,7 +13,8 @@ def buildModel(lr_rate, weights, weight_decay, verbose=False):
     
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = Model().to(device)
+    #model = Model().to(device)
+    model = modernUnet.MUN().to(device)
     loss_fn = CrossEntropyLoss(weight=weights.to(device),ignore_index=255)
     optimizer = Adam(model.parameters(), lr=lr_rate, weight_decay=weight_decay)
 
@@ -107,8 +110,8 @@ def trainModel(train_dataloader, val_dataloader, model, loss_fn, optimizer,devic
         trainSingleEpoch(train_dataloader, model, loss_fn, optimizer, device, (t+1), wenb, verbose)
         testModel(val_dataloader, model, loss_fn, device, (t+1), wenb, verbose)
 
-        averageIOU = eval.calculateIOU(val_set, model, device, subsize, False)
-        if wenb:
-            wandb.log({"Average IOU": averageIOU})
+        #averageIOU = eval.calculateIOU(torch.utils.data.Subset(val_set, list(range(50))), model, device, subsize, False)
+        #if wenb:
+        #    wandb.log({"Average IOU(50)": averageIOU, 'epoch': (t+1)})
 
     print("Done!")

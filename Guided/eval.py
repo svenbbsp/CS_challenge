@@ -6,7 +6,7 @@ from numpy import random
 import process_data
 import PIL
 import utils
-from matplotlib.colors import LinearSegmentedColormap
+from torch.utils.data import DataLoader
 
 
 def showImageTargetAndPrediction(image, target, prediction):
@@ -52,7 +52,7 @@ def predict(image,model,device,shape):
     return prediction
 
 def singleIOU(target, prediction):
-    target_masked = np.where(target != 255, 1, 0)
+    target_masked = np.where(target != 255, 1, 0)*target
 
     intersection = np.logical_and(target_masked, prediction)
     union = np.logical_or(target_masked, prediction)
@@ -62,30 +62,39 @@ def singleIOU(target, prediction):
 
 def calculateIOU(dataset, model, device, shape, verbose=False):
     IOU = 0
+    #Dice = []
     size = len(dataset)
     for sample in range(size):
 
         image, target = dataset[sample][0].numpy(), dataset[sample][1].numpy()
-        value = singleIOU(target, predict(image, model, device, shape))
-        
+        prediction = predict(image, model, device, shape)
+        value = mean_IOU(target,prediction)
         IOU += value
         if verbose:
             print(f'[{sample}/{size}] mean IOU: {IOU/sample}')
 
+        #Dice.append(dice_score(target, prediction))
+
     averageIOU = IOU/size
-    return averageIOU
+
+    #mean_dice_per_class = np.nanmean(Dice,axis=0)
+    return averageIOU#, mean_dice_per_class
 
 
-def dice_score(predicted_mask, ground_truth_mask):
+def dice_score(target, prediction):
     # Initialize an array to store dice scores for each class
     dice_scores = np.zeros(19)
     
     for i in range(19):
         
         # Extract masks for class i
-        pred_mask_i = np.where(predicted_mask == i, 1, 0)
-        gt_mask_i = np.where(ground_truth_mask == i, 1, 0)
+        pred_mask_i = np.where(prediction == i, 1, 0)
+        gt_mask_i = np.where(target == i, 1, 0)
         
+        if np.sum(gt_mask_i) == 0:
+            dice_scores[i] = np.nan  # Class not present, assign NaN
+            continue
+
         # Compute intersection, union, and dice score
         intersection = np.sum(pred_mask_i * gt_mask_i)
         union = np.sum(pred_mask_i) + np.sum(gt_mask_i)
@@ -96,3 +105,20 @@ def dice_score(predicted_mask, ground_truth_mask):
             dice_scores[i] = 2.0 * intersection / union
     
     return dice_scores
+
+def mean_IOU(target, prediction, num_classes=19):
+    iou_scores = []
+    for class_id in range(num_classes):
+        # Create masks for the specific class
+        target_masked = np.where(target == class_id, 1, 0)
+        prediction_masked = np.where(prediction == class_id, 1, 0)
+
+        intersection = np.logical_and(target_masked, prediction_masked)
+        union = np.logical_or(target_masked, prediction_masked)
+        
+        # Compute IoU for the current class
+        class_iou = np.sum(intersection) / np.sum(union)
+        iou_scores.append(class_iou)
+    
+    mean_iou = np.nanmean(iou_scores)
+    return mean_iou
