@@ -1,22 +1,26 @@
 from model import Model
 from torch.nn import CrossEntropyLoss
-from torch.optim import Adam
+from torch.optim import Adam, SGD
 import utils
 import torch
 import wandb
 import modernUnet
 import process_data
 import eval
+import numpy as np
 
 def buildModel(lr_rate, weights, weight_decay, verbose=False):
 
     
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    #model = Model().to(device)
-    model = modernUnet.MUN().to(device)
-    loss_fn = CrossEntropyLoss(weight=weights.to(device),ignore_index=255)
-    optimizer = Adam(model.parameters(), lr=lr_rate, weight_decay=weight_decay)
+    model = Model().to(device)
+    #model = modernUnet.MUN().to(device)
+    #loss_fn = CrossEntropyLoss(weight=weights.to(device),ignore_index=255)
+    #optimizer = Adam(model.parameters(), lr=lr_rate, weight_decay=weight_decay)
+    loss_fn = CrossEntropyLoss(ignore_index=255)
+    optimizer = SGD(model.parameters(),lr=lr_rate)
+
 
     if verbose:
         print(f'Working on device: {device}')
@@ -34,7 +38,7 @@ def trainSingleEpoch(dataloader, model, loss_fn, optimizer,device, epoch, wenb=T
     - optimizer:    the desired optimization.
     """
     size = len(dataloader.dataset)
-    
+    total_loss = []
     x_train=0
     model.train() #Set the model to train mode
     for batch, (image,target) in enumerate(dataloader):
@@ -54,15 +58,20 @@ def trainSingleEpoch(dataloader, model, loss_fn, optimizer,device, epoch, wenb=T
         optimizer.step()
         optimizer.zero_grad()
 
+        #Loss
+        loss, current = loss.item(), (batch + 1) * len(image)
+        total_loss.append(loss)
+
         if verbose:
             #print loss during training
-            loss, current = loss.item(), (batch + 1) * len(image)
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
         if wenb:
             wandb.log({"train_loss": loss, "x_train": (epoch-1)*len(dataloader)+x_train})
             x_train = x_train+1
 
+    if wenb:
+        wandb.log({"Average training loss": (np.mean(total_loss)), "Epoch": epoch})
         
     
 
@@ -101,17 +110,19 @@ def testModel(dataloader, model, loss_fn, device, epoch, wenb=True, verbose=Fals
 
     
     if wenb:
-        wandb.log({"average_validation_loss": test_loss, "epoch": epoch})
+        wandb.log({"Average validation loss": test_loss, "Epoch": epoch})
 
-def trainModel(train_dataloader, val_dataloader, model, loss_fn, optimizer,device, epochs, wenb, val_set,subsize, verbose):
+
+
+
+def trainModel(train_dataloader, val_dataloader, model, loss_fn, optimizer,device, epochs, wenb, subsize, verbose):
     for t in range(epochs):
         if verbose:
             print(f"Epoch {t+1}\n-------------------------------")
         trainSingleEpoch(train_dataloader, model, loss_fn, optimizer, device, (t+1), wenb, verbose)
         testModel(val_dataloader, model, loss_fn, device, (t+1), wenb, verbose)
-
-        averageIOU = eval.calculateIOU(val_set, model, device, subsize, False)
+        averageIOU = eval.IOU(val_dataloader, model, device, subsize)
         if wenb:
-            wandb.log({"Average IOU(full)": averageIOU, 'epoch': (t+1)})
+            wandb.log({"Average IOU": averageIOU, 'epoch': (t+1)})
 
     print("Done!")
