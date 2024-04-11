@@ -43,8 +43,3 @@ def postprocess(prediction, shape):
 
 
 
-
-
-
-
-

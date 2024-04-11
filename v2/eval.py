@@ -61,21 +61,21 @@ def singleIOU(target, prediction):
     return iou_score
 
 def calculateIOU(dataset, model, device, shape, verbose=False):
-    IOU = 0
+    IOU = []
     #Dice = []
     size = len(dataset)
     for sample in range(size):
 
-        image, target = dataset[sample][0].numpy(), dataset[sample][1].numpy()
+        image, target = dataset[sample][0].numpy(), dataset[sample][1]
+        target = utils.map_id_to_train_id(target).numpy()
         prediction = predict(image, model, device, shape)
-        value = mean_IOU(target,prediction)
-        IOU += value
+        IOU.append(mean_IOU(target,prediction))
         if verbose:
-            print(f'[{sample}/{size}] mean IOU: {IOU/sample}')
+            print(f'[{sample}/{size}] mean IOU: {np.mean(IOU)}')
 
         #Dice.append(dice_score(target, prediction))
 
-    averageIOU = IOU/size
+    averageIOU = np.mean(IOU)
 
     #mean_dice_per_class = np.nanmean(Dice,axis=0)
     return averageIOU#, mean_dice_per_class
@@ -88,8 +88,8 @@ def dice_score(target, prediction):
     for i in range(19):
         
         # Extract masks for class i
-        pred_mask_i = np.where(prediction == i, 1, 0)
-        gt_mask_i = np.where(target == i, 1, 0)
+        pred_mask_i = np.where(prediction.int() == i, 1, 0)
+        gt_mask_i = np.where(target.int() == i, 1, 0)
         
         if np.sum(gt_mask_i) == 0:
             dice_scores[i] = np.nan  # Class not present, assign NaN
@@ -112,6 +112,10 @@ def mean_IOU(target, prediction, num_classes=19):
         # Create masks for the specific class
         target_masked = np.where(target == class_id, 1, 0)
         prediction_masked = np.where(prediction == class_id, 1, 0)
+
+        if np.sum(target_masked) == 0:
+            iou_scores.append(np.nan)
+            continue
 
         intersection = np.logical_and(target_masked, prediction_masked)
         union = np.logical_or(target_masked, prediction_masked)

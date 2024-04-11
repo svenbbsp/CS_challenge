@@ -5,7 +5,7 @@ import utils
 import torch
 import wandb
 import modernUnet
-
+import process_data
 import eval
 
 def buildModel(lr_rate, weights, weight_decay, verbose=False):
@@ -44,10 +44,10 @@ def trainSingleEpoch(dataloader, model, loss_fn, optimizer,device, epoch, wenb=T
         target = utils.map_id_to_train_id(target).to(device)
         
         #predict
-        segmentation = model(image)
+        prediction = model(image)
 
         #Loss
-        loss = loss_fn(segmentation, target)
+        loss = loss_fn(prediction, target)
         
         #Backpropagation
         loss.backward()
@@ -110,8 +110,8 @@ def trainModel(train_dataloader, val_dataloader, model, loss_fn, optimizer,devic
         trainSingleEpoch(train_dataloader, model, loss_fn, optimizer, device, (t+1), wenb, verbose)
         testModel(val_dataloader, model, loss_fn, device, (t+1), wenb, verbose)
 
-        #averageIOU = eval.calculateIOU(torch.utils.data.Subset(val_set, list(range(50))), model, device, subsize, False)
-        #if wenb:
-        #    wandb.log({"Average IOU(50)": averageIOU, 'epoch': (t+1)})
+        averageIOU = eval.calculateIOU(val_set, model, device, subsize, False)
+        if wenb:
+            wandb.log({"Average IOU(full)": averageIOU, 'epoch': (t+1)})
 
     print("Done!")
