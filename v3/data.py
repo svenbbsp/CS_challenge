@@ -6,8 +6,19 @@ from torchvision import transforms
 from torchvision.transforms import InterpolationMode
 from GTA5.dataset import GTA_5
 
+class DivideBy255:
+    def __call__(self, tensor):
+        return tensor / 255.0
 
 def getTransforms(subsize):
+    trans = Compose([
+        transforms.PILToTensor(),
+        transforms.Resize(subsize, interpolation= InterpolationMode.NEAREST),
+        DivideBy255(),
+    ])
+    return trans
+
+def getTargetTransforms(subsize):
     trans = Compose([
         transforms.PILToTensor(),
         transforms.Resize(subsize, interpolation= InterpolationMode.NEAREST),
@@ -18,7 +29,16 @@ def getFlipTransforms(subsize):
     trans = Compose([
         transforms.PILToTensor(),
         transforms.Resize(subsize, interpolation= InterpolationMode.NEAREST),
-        transforms.RandomHorizontalFlip(1)
+        transforms.RandomHorizontalFlip(1),
+        DivideBy255(),
+    ])
+    return trans
+
+def getFlipTargetTransforms(subsize):
+    trans = Compose([
+        transforms.PILToTensor(),
+        transforms.Resize(subsize, interpolation= InterpolationMode.NEAREST),
+        transforms.RandomHorizontalFlip(1),
     ])
     return trans
 
@@ -33,15 +53,16 @@ def getGTAtransform(subsize):
 def loadData(root,subsize,val_size=0.2, flip= False, verbose=False):
     
     # Dataset from local root folder
-    dataset = Cityscapes(root=root, split='train', mode='fine', target_type='semantic', transform=getTransforms(subsize), target_transform=getTransforms(subsize))
-
-    if flip:
-        flipped_dataset = Cityscapes(root=root, split='train', mode='fine', target_type='semantic', transform=getFlipTransforms(subsize), target_transform=getFlipTransforms(subsize))
-        dataset = torch.utils.data.ConcatDataset([dataset, flipped_dataset])
+    dataset = Cityscapes(root=root, split='train', mode='fine', target_type='semantic', transform=getTransforms(subsize), target_transform=getTargetTransforms(subsize))
 
     # Train/val split
     generator1 = torch.Generator().manual_seed(2147483647)
     train_set, val_set = random_split(dataset, [1-val_size,val_size], generator=generator1)
+    
+    if flip:
+        flipped_dataset = Cityscapes(root=root, split='train', mode='fine', target_type='semantic', transform=getFlipTransforms(subsize), target_transform=getFlipTargetTransforms(subsize))
+        train_flip, _ = random_split(flipped_dataset, [1-val_size,val_size], generator=generator1)
+        train_set = torch.utils.data.ConcatDataset([train_set, train_flip])
 
     # Print sizes
     if verbose:
@@ -51,9 +72,8 @@ def loadData(root,subsize,val_size=0.2, flip= False, verbose=False):
 
     return train_set, val_set
 
-def loadGTAData(root,subsize,val_size=0.2,verbose=False):
+def loadGTAData(root,subsize,val_size=0.01,verbose=False):
     dataset = GTA_5(root,getGTAtransform(subsize))
-    print(len(dataset))
 
     # Train/val split
     train_set, val_set = random_split(dataset, [1-val_size,val_size])

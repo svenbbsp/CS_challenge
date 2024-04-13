@@ -14,13 +14,11 @@ def buildModel(lr_rate, weights, weight_decay, verbose=False):
     
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = Model().to(device)
-    #model = modernUnet.MUN().to(device)
-    #loss_fn = CrossEntropyLoss(weight=weights.to(device),ignore_index=255)
-    #optimizer = Adam(model.parameters(), lr=lr_rate, weight_decay=weight_decay)
-    loss_fn = CrossEntropyLoss(ignore_index=255)
-    optimizer = SGD(model.parameters(),lr=lr_rate)
-
+    #model = Model().to(device)
+    model = modernUnet.MUN().to(device)
+    loss_fn = CrossEntropyLoss(weight=weights.to(device),ignore_index=255)
+    optimizer = Adam(model.parameters(), lr=lr_rate, weight_decay=weight_decay)
+    
 
     if verbose:
         print(f'Working on device: {device}')
@@ -116,6 +114,7 @@ def testModel(dataloader, model, loss_fn, device, epoch, wenb=True, verbose=Fals
 
 
 def trainModel(train_dataloader, val_dataloader, model, loss_fn, optimizer,device, epochs, wenb, subsize, verbose):
+    best_iou = -np.inf
     for t in range(epochs):
         if verbose:
             print(f"Epoch {t+1}\n-------------------------------")
@@ -124,5 +123,10 @@ def trainModel(train_dataloader, val_dataloader, model, loss_fn, optimizer,devic
         averageIOU = eval.IOU(val_dataloader, model, device, subsize)
         if wenb:
             wandb.log({"Average IOU": averageIOU, 'epoch': (t+1)})
+
+        if averageIOU > best_iou:
+            best_iou = averageIOU
+            torch.save(model.state_dict(), "model_best.pth")
+        
 
     print("Done!")

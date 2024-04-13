@@ -409,7 +409,7 @@ class Downsample(nn.Module):
 
     def __init__(self, n_channels: int, num_spatial_dims: int, **kwargs):
         super().__init__()
-        self.conv = get_conv_with_right_spatial_dim(num_spatial_dims, in_channels=n_channels, out_channels=n_channels, kernel_size=3, stride=2, padding=1, **kwargs)
+        self.conv = get_conv_with_right_spatial_dim(num_spatial_dims, in_channels=n_channels, out_channels=n_channels, kernel_size=2, stride=2, padding=1, **kwargs)
 
     def forward(self, x: torch.Tensor):
         return self.conv(x)
@@ -447,7 +447,9 @@ def get_upconv_with_right_spatial_dim(spatial_dim, in_channels, out_channels, **
         upconv = nn.ConvTranspose1d(in_channels, out_channels, **kwargs_copy)
     elif spatial_dim == 2:
         upconv = nn.ConvTranspose2d(in_channels, out_channels, **kwargs_copy)
+    elif spatial_dim == 3:
+        upconv = nn.ConvTranspose3d(in_channels, out_channels, **kwargs_copy)
     else:
-        raise NotImplementedError(f'only 0<x<=2d convs implemented so far, but found spatial dim {spatial_dim}!')
+        raise NotImplementedError(f'only 0<x<=3d convs implemented so far, but found spatial dim {spatial_dim}!')
 
     return upconv
