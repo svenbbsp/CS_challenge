@@ -25,8 +25,8 @@ class MUN(nn.Module):
         outputs = self.output(x)
 
         if self.ODD:
-            cls_outputs = ODD(outputs, self.threshold)
-            #cls_outputs = confidence_score_3(outputs)
+            #cls_outputs = ODD(outputs, self.threshold)
+            cls_outputs = confidence_score_3(outputs)
             return outputs, cls_outputs
         else:
             return outputs

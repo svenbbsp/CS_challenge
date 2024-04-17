@@ -86,6 +86,7 @@ def single_IOU(target, prediction,num_classes=19):
             
         # Compute IoU for the current class
         class_iou = np.sum(intersection) / np.sum(union)
+        
         iou_scores.append(class_iou)
         
     mean_iou = (np.nanmean(iou_scores))
