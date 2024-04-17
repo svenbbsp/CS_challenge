@@ -3,3 +3,4 @@ __pycache__/
 Trained_models/
 wandb/
 Submissions/
+data/
