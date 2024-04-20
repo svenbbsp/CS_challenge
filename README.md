@@ -1,7 +1,7 @@
 # 5LSM0 CityScapes Challenge
 Codalab username: svenbbs  
 email: S.A.K.Bierenbroodspot@student.tue.nl   
-github:  https://github.com/svenbbsp/CS_challenge
+
 
 ## Libraries
 - pytorch
